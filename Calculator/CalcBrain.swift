@@ -60,13 +60,14 @@ class CalcBrain
         knownOps["M"] = Op.NullaryOperation("M", {()->Double? in return self.variableValues["M"]})
         
         opPrecedence["+"] = 1;
-        opPrecedence["-"] = 1;
+        opPrecedence["−"] = 1;
         opPrecedence["×"] = 2;
         opPrecedence["÷"] = 2;
     }
     private func describ()->String
     {
         errorStr = ""
+        
         let describResult = describ(opStack, highestPrecedence: 0)
         errorStr = describResult.errorString
         return describResult.descriptionFragment+(describResult.showEqualSign ? " =" :"")
@@ -79,8 +80,9 @@ class CalcBrain
             let op = remainingOpStack.removeLast()
             switch op{
             case Op.AppendOperand(let digit):
-                let isInteger = floor(digit) == digit
-                return (isInteger ? "\(Int(digit))":"\(digit)", digit, false, "", remainingOpStack)
+                let valueToReturn = (floor(digit) == digit) ? "\(Int(digit))":"\(digit)"
+                let needBracket = digit < 0
+                return ( (needBracket ? "(":"")+valueToReturn+(needBracket ? ")":""), digit, false, "", remainingOpStack)
             case Op.NullaryOperation(let symbol, let operation):
                 if let result = operation(){
                     return (symbol, result, false, "", remainingOpStack)
@@ -90,10 +92,18 @@ class CalcBrain
             case Op.UnaryOperation(let symbol, let operation):
                 let describReturn = describ(remainingOpStack, highestPrecedence: 0)
                 if let result = describReturn.result{
-                    return (symbol+"("+describReturn.descriptionFragment+")", operation(result), true, "", describReturn.remainingOpStack)
+                    if result < 0 && symbol == "√"
+                    {
+                        return (symbol+"("+describReturn.descriptionFragment+")", nil, false, "Error: Square Root of Nagetive Number", describReturn.remainingOpStack)
+                    }
+                    else
+                    {
+                        return (symbol+"("+describReturn.descriptionFragment+")", operation(result), true, "", describReturn.remainingOpStack)
+                    }
+                    
                 }
                 else{
-                    return (symbol+"("+describReturn.descriptionFragment+")", nil, false, "Invalid Operation", describReturn.remainingOpStack)
+                    return (symbol+"("+describReturn.descriptionFragment+")", nil, false, "Error: Invalid Operation", describReturn.remainingOpStack)
                 }
                 
             case Op.BinaryOperation(let symbol, let operation):
@@ -106,7 +116,14 @@ class CalcBrain
 
                     if let operand2 = describReturn2.result
                     {
-                        return ( (needBracket ? "(":"")+describReturn2.descriptionFragment+symbol+describReturn1.descriptionFragment+(needBracket ? ")":""), operation(operand1, operand2), true, "", describReturn2.remainingOpStack)
+                        if operand1 == 0 && symbol == "÷"
+                        {
+                            return ( (needBracket ? "(":"")+describReturn2.descriptionFragment+symbol+describReturn1.descriptionFragment+(needBracket ? ")":""), nil, false, "Error: Divide By 0", describReturn2.remainingOpStack)
+                        }
+                        else
+                        {
+                            return ( (needBracket ? "(":"")+describReturn2.descriptionFragment+symbol+describReturn1.descriptionFragment+(needBracket ? ")":""), operation(operand1, operand2), true, "", describReturn2.remainingOpStack)
+                        }
                     }
                     else
                     {
@@ -119,7 +136,7 @@ class CalcBrain
                 }
             }
         }
-        return (" ", nil, false, "No Operand", opStack);
+        return (" ", nil, false, "Error: Operand Missing", opStack);
     }
     private func evaluate(opStack:[Op])->(result:Double?, remainingOpStack:[Op])
     {
@@ -134,8 +151,15 @@ class CalcBrain
             case Op.UnaryOperation(let symbol, let operation):
                 let evaluatedReturn = evaluate(remainingOpStack)
                 if let op1 = evaluatedReturn.result{
-                    let result = operation(op1)
-                    return (result, evaluatedReturn.remainingOpStack)
+                    if op1 < 0 && symbol == "√"
+                    {
+                        return (nil, evaluatedReturn.remainingOpStack)
+                    }
+                    else
+                    {
+                        let result = operation(op1)
+                        return (result, evaluatedReturn.remainingOpStack)
+                    }
                 }
             case Op.BinaryOperation(let symbol, let operation):
                 let evaluatedReturn1 = evaluate(remainingOpStack)
@@ -143,7 +167,14 @@ class CalcBrain
                     let evaluatedReturn2 = evaluate(evaluatedReturn1.remainingOpStack)
                     if let op2 = evaluatedReturn2.result
                     {
-                        return (operation(op1, op2), evaluatedReturn2.remainingOpStack)
+                        if op1 == 0 && symbol == "÷"
+                        {
+                            return (nil, evaluatedReturn2.remainingOpStack)
+                        }
+                        else
+                        {
+                            return (operation(op1, op2), evaluatedReturn2.remainingOpStack)
+                        }
                     }
                 }
             }

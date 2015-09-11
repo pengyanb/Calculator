@@ -26,15 +26,13 @@ class CalculatorViewController: UIViewController {
     let calcBrain  = CalcBrain()
     var userIsInTheMiddleOfEnterring = false
     var dotHasBeenEntered = false
-    var piEnteredPreviously = false
+    //var piEnteredPreviously = false
     
     var displayValue:Double?{
         get{
             if let numberValue = NSNumberFormatter().numberFromString(display.text!){
                 return numberValue.doubleValue
-            }
-            else
-            {
+            }else{
                 return nil
             }
         }
@@ -80,7 +78,7 @@ class CalculatorViewController: UIViewController {
     @IBAction func enter() {
         userIsInTheMiddleOfEnterring = false
         dotHasBeenEntered = false
-        piEnteredPreviously = false
+        //piEnteredPreviously = false
         if let displayValueUnwrap = displayValue{
             if let result = calcBrain.pushOperand(displayValueUnwrap)
             {
@@ -93,7 +91,7 @@ class CalculatorViewController: UIViewController {
     @IBAction func clear() {
         userIsInTheMiddleOfEnterring = false
         dotHasBeenEntered = false
-        piEnteredPreviously = false
+        //piEnteredPreviously = false
         calcBrain.clearStack()
         displayValue = 0;
     }
@@ -110,21 +108,20 @@ class CalculatorViewController: UIViewController {
     }
     @IBAction func performOperation(sender: UIButton)
     {
-        if piEnteredPreviously
+        if userIsInTheMiddleOfEnterring
         {
-            piEnteredPreviously = false
+            enter()
         }
         else
         {
-            if userIsInTheMiddleOfEnterring
+            println("user not in the middle of entering")
+            if(sender.currentTitle! == "−")
             {
-                enter()
+                println("− pressed")
+                userIsInTheMiddleOfEnterring = true
+                display.text = "-"
+                return
             }
-        }
-        
-        if sender.currentTitle == "π"
-        {
-            piEnteredPreviously = true
         }
         displayValue = calcBrain.performOperation(sender.currentTitle!)
     }
